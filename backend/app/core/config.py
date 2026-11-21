@@ -2,6 +2,7 @@
 
 import json
 from typing import List
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -29,6 +30,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = Field(default="insecure-development-secret-change-in-production")
     JWT_ALGORITHM: str = Field(default="HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30)
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7)
 
     # AI Integration
     GEMINI_API_KEY: str | None = Field(default=None)

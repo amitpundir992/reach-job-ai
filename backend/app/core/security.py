@@ -1,14 +1,17 @@
 """Security utilities for authentication and authorization."""
 
-from datetime import datetime, timedelta
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
+
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+
 from app.core.config import settings
 
-
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing context using Argon2id (most secure)
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def create_access_token(data: Dict[str, Any], expires_delta: timedelta | None = None) -> str:
@@ -25,14 +28,39 @@ def create_access_token(data: Dict[str, Any], expires_delta: timedelta | None = 
     to_encode = data.copy()
 
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
 
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
     return encoded_jwt
+
+
+def create_refresh_token() -> str:
+    """
+    Create a cryptographically secure refresh token.
+
+    Returns:
+        Random token string (64 characters hex)
+    """
+    return secrets.token_hex(32)
+
+
+def hash_token(token: str) -> str:
+    """
+    Hash a token using SHA-256 for storage.
+
+    Args:
+        token: Token to hash
+
+    Returns:
+        Hashed token string
+    """
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def verify_token(token: str) -> Dict[str, Any] | None:
@@ -46,9 +74,7 @@ def verify_token(token: str) -> Dict[str, Any] | None:
         Decoded token payload or None if invalid
     """
     try:
-        payload = jwt.decode(
-            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         return payload
     except JWTError:
         return None
@@ -56,7 +82,7 @@ def verify_token(token: str) -> Dict[str, Any] | None:
 
 def get_password_hash(password: str) -> str:
     """
-    Hash a password using bcrypt.
+    Hash a password using Argon2id.
 
     Args:
         password: Plain text password
