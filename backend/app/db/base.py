@@ -10,5 +10,4 @@ class Base(DeclarativeBase):
 
 
 # Import all models here for Alembic auto-generation
-# from app.models.user import User
-# from app.models.company import Company
+from app.models.user import RefreshToken, User, UserSettings  # noqa: F401, E402
